@@ -249,6 +249,7 @@ html, body {
       <span class="brand-cross">✦ ✝ ✦</span>
       <span class="brand-title">Liturgy of the Hours</span>
       <span class="brand-clock" id="clock"></span>
+      <button onclick="clearProgress()" title="Clear checkmarks" style="background:none;border:none;cursor:pointer;color:rgba(200,168,74,0.35);font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.12em;padding:2px 6px;transition:color 0.2s;" onmouseover="this.style.color='var(--gold-dim)'" onmouseout="this.style.color='rgba(200,168,74,0.35)'">RESET</button>
     </div>
     <div class="hour-scroll" id="hourNav"></div>
   </nav>
@@ -372,9 +373,25 @@ const SALVE = `Hail, holy Queen, Mother of Mercy,\nhail, our life, our sweetness
 
 // ── STATE ─────────────────────────────────────────
 let activeId = getCurrentId();
-let visitedIds = new Set();
 let silenceTimers = {};
 let intention = '';
+
+// localStorage persistence — keyed to today's date so it clears overnight
+const TODAY_KEY = 'visited_' + new Date().toISOString().slice(0,10);
+function loadVisited() {
+  try { return new Set(JSON.parse(localStorage.getItem(TODAY_KEY) || '[]')); }
+  catch(e) { return new Set(); }
+}
+function saveVisited() {
+  try { localStorage.setItem(TODAY_KEY, JSON.stringify([...visitedIds])); }
+  catch(e) {}
+}
+function clearProgress() {
+  visitedIds = new Set();
+  try { localStorage.removeItem(TODAY_KEY); } catch(e) {}
+  renderNav();
+}
+let visitedIds = loadVisited();
 
 function getCurrentId() {
   const h = new Date().getHours();
@@ -802,6 +819,7 @@ function renderNav() {
 function show(id) {
   activeId = id;
   visitedIds.add(id);
+  saveVisited();
   renderNav();
   const content = id === 'rosary' ? renderRosary() : renderHour(id);
   document.getElementById('mainInner').innerHTML = content;
