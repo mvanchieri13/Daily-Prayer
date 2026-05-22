@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="The Hours">
+<meta name="theme-color" content="#0f0e0b">
+<title>Liturgy of the Hours</title>
+<link rel="apple-touch-icon" href="icon.png">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Cinzel:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0e0b;
+  --surface: #161410;
+  --border: rgba(180,148,72,0.16);
+  --gold: #c8a84a;
+  --gold-dim: rgba(200,168,74,0.55);
+  --gold-faint: rgba(200,168,74,0.09);
+  --cream: #f0e8d5;
+  --cream-dim: rgba(240,232,213,0.72);
+  --cream-faint: rgba(240,232,213,0.38);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--cream);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.75;
+  overflow: hidden;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: var(--safe-top);
+}
+
+/* ── TOP NAV ── */
+.top-nav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand-cross { color: var(--gold); letter-spacing: 0.35em; font-size: 0.85rem; }
+.brand-title { font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.18em; color: var(--gold); font-weight: 400; }
+.brand-clock { margin-left: auto; font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em; color: var(--gold-dim); }
+
+.hour-scroll {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0 6px;
+}
+.hour-scroll::-webkit-scrollbar { display: none; }
+
+.hour-tab {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 13px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  gap: 1px;
+  border-radius: 4px 4px 0 0;
+  transition: background 0.15s;
+}
+.hour-tab:hover { background: var(--gold-faint); }
+.hour-tab.active { background: var(--gold-faint); }
+.hour-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 4px; right: 4px;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 2px 2px 0 0;
+}
+.tab-latin { font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.14em; color: var(--gold-dim); }
+.hour-tab.active .tab-latin { color: var(--gold); }
+.tab-time { font-size: 0.65rem; color: var(--cream-faint); font-style: italic; }
+.hour-tab.active .tab-time { color: var(--cream-dim); }
+.tab-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--gold); margin-top: 2px; box-shadow: 0 0 4px var(--gold); }
+
+/* ── MAIN SCROLL ── */
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--safe-bottom);
+}
+
+.main-inner {
+  padding: 28px 20px 80px;
+  max-width: 580px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ── HOUR HEADER ── */
+.hour-header {
+  margin-bottom: 26px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.hour-name-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.latin-name { font-family: 'Cinzel', serif; font-size: 1.7rem; color: var(--gold); font-weight: 400; letter-spacing: 0.08em; }
+.english-name { font-style: italic; font-size: 0.95rem; color: var(--cream-faint); }
+.hour-desc { font-size: 0.86rem; color: var(--cream-faint); font-style: italic; margin-bottom: 8px; }
+.duration-badge {
+  display: inline-block;
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.2em;
+  color: rgba(200,168,74,0.45); border: 1px solid var(--border); padding: 2px 9px;
+}
+
+/* ── SECTIONS ── */
+.section { margin-bottom: 24px; }
+
+.section-label {
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.26em;
+  color: var(--gold-dim); margin-bottom: 9px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.sign-of-cross { text-align: center; margin-bottom: 14px; }
+.cross-symbol { font-size: 1.3rem; color: var(--gold); letter-spacing: 0.3em; opacity: 0.75; display: block; margin-bottom: 6px; }
+.cross-words { font-style: italic; font-size: 0.88rem; color: var(--cream-faint); line-height: 1.6; }
+
+.versicle-block { font-style: italic; color: var(--cream-dim); }
+.versicle { display: grid; grid-template-columns: 1.4em 1fr; gap: 2px 8px; margin: 3px 0; }
+.v-mark { color: var(--gold); font-style: normal; }
+
+.antiphon {
+  font-style: italic; color: var(--gold-dim); font-size: 0.93rem;
+  padding: 6px 14px; border-left: 1px solid rgba(200,168,74,0.25); margin-bottom: 10px;
+}
+.antiphon.bottom { margin-top: 8px; margin-bottom: 0; }
+
+.psalm-verses p { color: var(--cream-dim); margin-bottom: 0.4em; font-size: 0.98rem; white-space: pre-line; }
+
+.reading-ref { font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.16em; color: var(--gold-dim); margin-bottom: 7px; }
+.reading-text { color: var(--cream-dim); font-size: 0.97rem; line-height: 1.8; border-left: 1px solid var(--border); padding-left: 14px; font-style: italic; }
+
+.psalm-ref-inline { font-style: italic; letter-spacing: 0; color: var(--cream-faint); font-family: 'EB Garamond', serif; font-size: 0.95rem; font-weight: 400; }
+
+.canticle-name { font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.16em; color: var(--gold-dim); margin-bottom: 7px; }
+.canticle-text { color: var(--cream-dim); font-style: italic; font-size: 0.97rem; line-height: 1.85; }
+.canticle-text p { margin-bottom: 0.45em; white-space: pre-line; }
+
+/* Silence prompt */
+.silence-block {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px; border: 1px solid var(--border); background: var(--gold-faint);
+  margin-bottom: 4px;
+}
+.silence-label { font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.22em; color: var(--gold-dim); margin-bottom: 6px; }
+.silence-timer { font-family: 'Cinzel', serif; font-size: 1.4rem; color: var(--gold); letter-spacing: 0.1em; min-width: 2.5em; text-align: center; }
+.silence-btn {
+  margin-top: 8px; font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.18em;
+  color: var(--gold-dim); background: none; border: 1px solid var(--border);
+  padding: 4px 14px; cursor: pointer; transition: all 0.2s;
+}
+.silence-btn:hover { color: var(--gold); border-color: var(--gold); }
+
+/* Daily intention */
+.intention-block { margin-bottom: 4px; }
+.intention-input {
+  width: 100%; background: none; border: none; border-bottom: 1px solid var(--border);
+  color: var(--cream-dim); font-family: 'EB Garamond', serif; font-size: 0.97rem;
+  font-style: italic; padding: 6px 0; outline: none; line-height: 1.5;
+}
+.intention-input::placeholder { color: var(--cream-faint); }
+.intention-input:focus { border-bottom-color: var(--gold-dim); }
+
+/* Examen */
+.examen-text { font-style: italic; color: var(--cream-faint); font-size: 0.92rem; line-height: 1.85; }
+
+/* Act of contrition */
+.contrition-text { color: var(--cream-dim); font-style: italic; font-size: 0.97rem; line-height: 1.85; }
+
+/* Dismissal */
+.dismissal {
+  margin-top: 10px; font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.18em;
+  color: var(--gold-dim); text-align: center; padding: 12px; border: 1px solid var(--border);
+}
+
+.ornament { text-align: center; color: rgba(200,168,74,0.22); font-size: 0.7rem; letter-spacing: 0.5em; margin: 20px 0; }
+
+/* Visited indicator */
+.hour-tab .tab-check { display: none; font-size: 0.5rem; color: rgba(200,168,74,0.5); margin-top: 1px; }
+.hour-tab.visited .tab-check { display: block; }
+
+/* Angelus special layout */
+.angelus-block { color: var(--cream-dim); font-size: 0.97rem; line-height: 1.85; }
+.angelus-verse { margin-bottom: 0.5em; white-space: pre-line; }
+.angelus-response { font-style: italic; color: var(--gold-dim); margin-bottom: 0.8em; }
+.angelus-ave { font-style: italic; color: var(--cream-dim); margin-bottom: 0.8em; white-space: pre-line; }
+
+/* Salve Regina */
+.salve-text { color: var(--cream-dim); font-style: italic; font-size: 0.97rem; line-height: 1.9; white-space: pre-line; }
+
+@media (min-width: 700px) {
+  .shell { flex-direction: row; }
+  .top-nav {
+    width: 200px; flex-shrink: 0;
+    border-bottom: none; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding-top: 24px;
+    height: 100vh; height: 100dvh;
+  }
+  .brand-row { flex-direction: column; align-items: flex-start; padding: 0 20px 18px; gap: 6px; }
+  .brand-clock { margin-left: 0; margin-top: 4px; }
+  .hour-scroll { flex-direction: column; overflow-x: visible; overflow-y: auto; padding: 10px 0; flex: 1; }
+  .hour-tab { flex-direction: row; padding: 9px 20px; border-radius: 0; text-align: left; gap: 10px; align-items: center; }
+  .hour-tab.active::after { top: 0; bottom: 0; left: 0; right: auto; width: 2px; height: auto; border-radius: 0; }
+  .tab-time { margin-left: auto; }
+  .tab-dot { margin-top: 0; }
+  .main-inner { padding: 44px 48px 80px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <nav class="top-nav">
+    <div class="brand-row">
+      <span class="brand-cross">✦ ✝ ✦</span>
+      <span class="brand-title">Liturgy of the Hours</span>
+      <span class="brand-clock" id="clock"></span>
+    </div>
+    <div class="hour-scroll" id="hourNav"></div>
+  </nav>
+
+  <div class="main-scroll" id="mainScroll">
+    <div class="main-inner" id="mainInner"></div>
+  </div>
+
+</div>
+<script>
+// ── DATA ──────────────────────────────────────────
+const HOURS = [
+  {
+    id:'lauds', latin:'Lauds', english:'Morning Prayer',
+    timeLabel:'6 AM', start:6, duration:'~7 min',
+    desc:'The prayer of sunrise — the first fruits of the day offered to God.',
+    opening:[{v:'V.',t:'O Lord, open my lips.'},{v:'R.',t:'And my mouth will proclaim your praise.'}],
+    psalmRef:'Psalm 63:1–4',
+    psalm:{
+      antiphon:'At dawn I seek you; my soul thirsts for you.',
+      verses:['O God, you are my God, I long for you;\nmy soul is thirsting for you.','My body pines for you\nlike a dry, weary land without water.','So I gaze on you in the sanctuary\nto see your strength and your glory.','For your love is better than life;\nmy lips will speak your praise.']
+    },
+    reading:{ref:'Isaiah 55:3',text:'Listen, and you will live. I shall make an everlasting covenant with you, the steadfast loving-kindness promised to David.'},
+    responsory:[{v:'V.',t:'In the morning, fill us with your love.'},{v:'R.',t:'We shall exult and rejoice all our days.'}],
+    canticle:{name:'Benedictus — Luke 1:68–69, 78–79',verses:['Blessed be the Lord, the God of Israel;\nhe has come to his people and set them free.','He has raised up for us a mighty savior,\nborn of the house of his servant David.','In the tender compassion of our God\nthe dawn from on high shall break upon us,\nto shine on those who dwell in darkness\nand the shadow of death.']},
+    closing:'Deo Gratias — Thanks be to God',
+    hasIntention: true,
+  },
+  {
+    id:'terce', latin:'Terce', english:'Mid-Morning Prayer',
+    timeLabel:'9 AM', start:8, duration:'~3 min',
+    desc:'The third hour — invoking the Holy Spirit before the work of the day.',
+    opening:[{v:'V.',t:'O God, come to my assistance.'},{v:'R.',t:'O Lord, make haste to help me.'}],
+    psalmRef:'Psalm 119:33–35',
+    psalm:{
+      antiphon:'Teach me your statutes, O Lord.',
+      verses:['Teach me the demands of your statutes\nand I will keep them to the end.','Train me to observe your law;\nto keep it with my heart.','Guide me in the path of your commands;\nfor there is my delight.']
+    },
+    reading:{ref:'1 Thessalonians 5:17',text:'Pray without ceasing.'},
+    responsory:[{v:'V.',t:'Send forth your Spirit, O Lord.'},{v:'R.',t:'And renew the face of the earth.'}],
+    closing:'Deo Gratias — Thanks be to God',
+  },
+  {
+    id:'sext', latin:'Sext', english:'Midday Prayer',
+    timeLabel:'12 PM', start:11, duration:'~5 min',
+    desc:'The sixth hour — the hour Christ was raised upon the Cross.',
+    opening:[{v:'V.',t:'O God, come to my assistance.'},{v:'R.',t:'O Lord, make haste to help me.'}],
+    psalmRef:'Psalm 23:1–4',
+    psalm:{
+      antiphon:'The Lord is my shepherd; there is nothing I shall want.',
+      verses:['The Lord is my shepherd;\nthere is nothing I shall want.','Near restful waters he leads me,\nto revive my drooping spirit.','Even though I walk in the valley of darkness\nI fear no evil; for you are with me.']
+    },
+    reading:{ref:'Colossians 3:17',text:'Whatever you do, in word or deed, do everything in the name of the Lord Jesus, giving thanks to God the Father through him.'},
+    responsory:[{v:'V.',t:'The eyes of all creatures look to you.'},{v:'R.',t:'You give them food in due season.'}],
+    hasAngelus: true,
+    closing:'Deo Gratias — Thanks be to God',
+  },
+  {
+    id:'none', latin:'None', english:'Mid-Afternoon Prayer',
+    timeLabel:'3 PM', start:14, duration:'~3 min',
+    desc:'The ninth hour — when Christ gave up his spirit on the Cross.',
+    opening:[{v:'V.',t:'O God, come to my assistance.'},{v:'R.',t:'O Lord, make haste to help me.'}],
+    psalmRef:'Psalm 116:1–2, 9',
+    psalm:{
+      antiphon:'Precious in the eyes of the Lord is the death of his faithful.',
+      verses:['I love the Lord, for he has heard\nthe cry of my appeal.','For he turned his ear to me\nin the day when I called him.','I will walk in the presence of the Lord\nin the land of the living.']
+    },
+    reading:{ref:'Hebrews 4:15',text:'We do not have a high priest who is unable to sympathize with our weaknesses, but one who has been tempted in every way as we are, yet without sin.'},
+    responsory:[{v:'V.',t:'My soul is thirsting for God, the God of my life.'},{v:'R.',t:'When can I enter and see the face of God?'}],
+    closing:'Deo Gratias — Thanks be to God',
+  },
+  {
+    id:'vespers', latin:'Vespers', english:'Evening Prayer',
+    timeLabel:'6 PM', start:17, duration:'~7 min',
+    desc:"The prayer of thanksgiving at day's end, as the lamps are lit.",
+    opening:[{v:'V.',t:'O God, come to my assistance.'},{v:'R.',t:'O Lord, make haste to help me.'}],
+    psalmRef:'Psalm 141:1–3, 8',
+    psalm:{
+      antiphon:'Let my prayer rise before you like incense.',
+      verses:['I have called to you, Lord; hasten to help me!\nHear my voice when I cry to you.','Let my prayer arise before you like incense,\nthe raising of my hands like an evening oblation.','Set, O Lord, a guard over my mouth;\nkeep watch at the door of my lips.','My eyes are turned to you, Sovereign Lord;\nin you I take refuge.']
+    },
+    reading:{ref:'Ephesians 3:20–21',text:'To him who is able to do far more abundantly than all that we ask or think, according to the power at work within us — to him be glory in the Church and in Christ Jesus throughout all generations, forever and ever. Amen.'},
+    responsory:[{v:'V.',t:'Our help is in the name of the Lord.'},{v:'R.',t:'Who made heaven and earth.'}],
+    canticle:{name:'Magnificat — Luke 1:46–50',verses:['My soul proclaims the greatness of the Lord,\nmy spirit rejoices in God my Savior.','For he has looked with favor on his lowly servant;\nfrom this day all generations will call me blessed.','The Almighty has done great things for me,\nand holy is his Name.\nHe has mercy on those who fear him\nin every generation.']},
+    closing:'Deo Gratias — Thanks be to God',
+  },
+  {
+    id:'compline', latin:'Compline', english:'Night Prayer',
+    timeLabel:'9 PM', start:20, duration:'~7 min',
+    desc:'The last prayer before sleep — surrendering the night to God.',
+    opening:[{v:'V.',t:'O God, come to my assistance.'},{v:'R.',t:'O Lord, make haste to help me.'}],
+    psalmRef:'Psalm 91:1–2, 5, 11',
+    psalm:{
+      antiphon:'He who dwells in the shelter of the Most High shall rest in the shadow of the Almighty.',
+      verses:['He who dwells in the shelter of the Most High\nand abides in the shade of the Almighty\nsays to the Lord: "My refuge, my stronghold,\nmy God in whom I trust."','You will not fear the terror of the night,\nnor the arrow that flies by day.','For you has he commanded his angels\nto keep you in all your ways.']
+    },
+    reading:{ref:'1 Peter 5:8–9',text:'Be sober and vigilant. Your opponent the devil is prowling like a roaring lion looking for someone to devour. Resist him, steadfast in faith.'},
+    responsory:[{v:'V.',t:'Into your hands, Lord, I commend my spirit.'},{v:'R.',t:'You have redeemed us, Lord God of truth.'}],
+    canticle:{name:'Nunc Dimittis — Luke 2:29–32',verses:['Lord, now you let your servant go in peace;\nyour word has been fulfilled.','My own eyes have seen the salvation\nwhich you have prepared in the sight of every people:','A light to reveal you to the nations\nand the glory of your people Israel.']},
+    hasExamen: true,
+    hasSalve: true,
+    closing:'May the all-powerful Lord grant us a restful night and a peaceful death. Amen.',
+  },
+];
+
+const ANGELUS = [
+  {type:'verse', text:'The Angel of the Lord declared unto Mary.'},
+  {type:'response', text:'And she conceived of the Holy Spirit.'},
+  {type:'ave', text:'Hail Mary, full of grace, the Lord is with thee.\nBlessed art thou among women,\nand blessed is the fruit of thy womb, Jesus.\nHoly Mary, Mother of God,\npray for us sinners, now and at the hour of our death. Amen.'},
+  {type:'verse', text:'Behold the handmaid of the Lord.'},
+  {type:'response', text:'Be it done unto me according to thy word.'},
+  {type:'ave', text:'Hail Mary…'},
+  {type:'verse', text:'And the Word was made flesh.'},
+  {type:'response', text:'And dwelt among us.'},
+  {type:'ave', text:'Hail Mary…'},
+  {type:'verse', text:'Pray for us, O holy Mother of God.'},
+  {type:'response', text:'That we may be made worthy of the promises of Christ.'},
+];
+
+const SALVE = `Hail, holy Queen, Mother of Mercy,\nhail, our life, our sweetness and our hope.\nTo thee do we cry, poor banished children of Eve;\nto thee do we send up our sighs,\nmourning and weeping in this vale of tears.\nTurn then, most gracious advocate,\nthine eyes of mercy toward us;\nand after this our exile,\nshow unto us the blessed fruit of thy womb, Jesus.\nO clement, O loving, O sweet Virgin Mary.`;
+
+// ── STATE ─────────────────────────────────────────
+let activeId = getCurrentId();
+let visitedIds = new Set();
+let silenceTimers = {};
+let intention = '';
+
+function getCurrentId() {
+  const h = new Date().getHours();
+  let result = HOURS[0];
+  for (const hr of HOURS) { if (h >= hr.start) result = hr; }
+  return result.id;
+}
+
+// ── HELPERS ───────────────────────────────────────
+function vc(lines) {
+  return lines.map(l => `
+    <div class="versicle">
+      <span class="v-mark">${l.v}</span>
+      <span>${l.t}</span>
+    </div>`).join('');
+}
+
+function ornament() { return '<div class="ornament">· · ·</div>'; }
+
+function sectionLabel(text) {
+  return `<div class="section-label">${text}</div>`;
+}
+
+// ── SILENCE COMPONENT ─────────────────────────────
+function silenceBlock(hourId) {
+  const key = `silence-${hourId}`;
+  return `
+    <div class="silence-block" id="${key}">
+      <span class="silence-label">SILENCE</span>
+      <span class="silence-timer" id="${key}-display">0:15</span>
+      <button class="silence-btn" onclick="startSilence('${hourId}')">Begin</button>
+    </div>`;
+}
+
+function startSilence(hourId) {
+  const key = `silence-${hourId}`;
+  const display = document.getElementById(`${key}-display`);
+  const btn = document.querySelector(`#${key} .silence-btn`);
+  if (!display || !btn) return;
+  if (silenceTimers[hourId]) return;
+  btn.textContent = '…';
+  btn.disabled = true;
+  let secs = 15;
+  display.textContent = `0:${String(secs).padStart(2,'0')}`;
+  silenceTimers[hourId] = setInterval(() => {
+    secs--;
+    if (secs <= 0) {
+      clearInterval(silenceTimers[hourId]);
+      delete silenceTimers[hourId];
+      display.textContent = 'Amen';
+      btn.textContent = 'Done';
+      btn.disabled = false;
+    } else {
+      display.textContent = `0:${String(secs).padStart(2,'0')}`;
+    }
+  }, 1000);
+}
+
+// ── RENDER HOUR ───────────────────────────────────
+function renderHour(id) {
+  const h = HOURS.find(x => x.id === id);
+  if (!h) return '';
+
+  let s = '';
+
+  // Header
+  s += `
+    <div class="hour-header">
+      <div class="hour-name-row">
+        <span class="latin-name">${h.latin}</span>
+        <span class="english-name">${h.english}</span>
+      </div>
+      <div class="hour-desc">${h.desc}</div>
+      <span class="duration-badge">${h.duration}</span>
+    </div>`;
+
+  // Silence prompt
+  s += `<div class="section">${sectionLabel('Stillness')}${silenceBlock(h.id)}</div>${ornament()}`;
+
+  // Opening + Sign of Cross
+  s += `
+    <div class="section">
+      ${sectionLabel('Opening')}
+      <div class="sign-of-cross">
+        <span class="cross-symbol">✝</span>
+        <span class="cross-words">In the name of the Father, and of the Son,<br>and of the Holy Spirit. Amen.</span>
+      </div>
+      <div class="versicle-block">${vc(h.opening)}</div>
+    </div>${ornament()}`;
+
+  // Daily intention (Lauds only)
+  if (h.hasIntention) {
+    s += `
+      <div class="section">
+        ${sectionLabel('Daily Intention')}
+        <div class="intention-block">
+          <input class="intention-input" id="intentionInput" type="text"
+            placeholder="I offer this day for…"
+            value="${intention}"
+            oninput="intention=this.value" />
+        </div>
+      </div>${ornament()}`;
+  }
+
+  // Psalm
+  s += `
+    <div class="section">
+      ${sectionLabel('Psalm <span class="psalm-ref-inline">' + h.psalmRef + '</span>')}
+      <div class="antiphon">${h.psalm.antiphon}</div>
+      <div class="psalm-verses">
+        ${h.psalm.verses.map(v => `<p>${v}</p>`).join('')}
+      </div>
+      <div class="antiphon bottom">${h.psalm.antiphon}</div>
+    </div>${ornament()}`;
+
+  // Reading
+  s += `
+    <div class="section">
+      ${sectionLabel('Reading')}
+      <div class="reading-ref">${h.reading.ref}</div>
+      <div class="reading-text">${h.reading.text}</div>
+    </div>${ornament()}`;
+
+  // Responsory
+  s += `
+    <div class="section">
+      ${sectionLabel('Responsory')}
+      <div class="versicle-block">${vc(h.responsory)}</div>
+    </div>`;
+
+  // Angelus (Sext only)
+  if (h.hasAngelus) {
+    s += `${ornament()}
+      <div class="section">
+        ${sectionLabel('The Angelus')}
+        <div class="angelus-block">
+          ${ANGELUS.map(line => {
+            if (line.type === 'verse') return `<div class="angelus-verse">${line.text}</div>`;
+            if (line.type === 'response') return `<div class="angelus-response">R. ${line.text}</div>`;
+            if (line.type === 'ave') return `<div class="angelus-ave">${line.text}</div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
+  // Gospel Canticle
+  if (h.canticle) {
+    s += `${ornament()}
+      <div class="section">
+        ${sectionLabel('Gospel Canticle')}
+        <div class="canticle-name">${h.canticle.name}</div>
+        <div class="canticle-text">
+          ${h.canticle.verses.map(v => `<p>${v}</p>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  // Act of Contrition + Examen (Compline)
+  if (h.hasExamen) {
+    s += `${ornament()}
+      <div class="section">
+        ${sectionLabel('Act of Contrition')}
+        <div class="contrition-text">
+          O my God, I am heartily sorry for having offended you,
+          and I detest all my sins, because I dread the loss of heaven
+          and the pains of hell, but most of all because they offend you,
+          my God, who are all good and deserving of all my love.
+          I firmly resolve, with the help of your grace, to confess my sins,
+          to do penance, and to amend my life. Amen.
+        </div>
+      </div>${ornament()}
+      <div class="section">
+        ${sectionLabel('Examen')}
+        <div class="examen-text">
+          Pause in silence. Review the day honestly before God —
+          where you were faithful, where you fell short.
+          Express sorrow simply, then let it go.
+          Ask for grace for tomorrow.
+        </div>
+      </div>`;
+  }
+
+  // Salve Regina (Compline)
+  if (h.hasSalve) {
+    s += `${ornament()}
+      <div class="section">
+        ${sectionLabel('Salve Regina')}
+        <div class="salve-text">${SALVE}</div>
+      </div>`;
+  }
+
+  // Closing
+  s += `${ornament()}
+    <div class="section">
+      ${sectionLabel('Closing')}
+      <div class="versicle-block">${vc([{v:'V.',t:'Let us bless the Lord.'},{v:'R.',t:'Thanks be to God.'}])}</div>
+      <div class="dismissal">${h.closing}</div>
+    </div>`;
+
+  return s;
+}
+
+// ── ROSARY DATA ───────────────────────────────────
+const MYSTERIES = {
+  joyful: {
+    name: 'Joyful Mysteries',
+    days: 'Monday & Saturday',
+    color: '#4a7c59',
+    list: [
+      { n:1, title:'The Annunciation', fruit:'Humility', text:'The Angel Gabriel announces to Mary that she will conceive the Son of God by the Holy Spirit.' },
+      { n:2, title:'The Visitation', fruit:'Love of Neighbor', text:'Mary visits her cousin Elizabeth, who is filled with the Holy Spirit and greets her as the Mother of the Lord.' },
+      { n:3, title:'The Nativity', fruit:'Poverty of Spirit', text:'Jesus is born in a stable in Bethlehem, wrapped in swaddling clothes and laid in a manger.' },
+      { n:4, title:'The Presentation', fruit:'Obedience', text:'Mary and Joseph present the infant Jesus in the Temple, where Simeon and Anna proclaim him the Savior.' },
+      { n:5, title:'Finding in the Temple', fruit:'Zeal for God', text:'After three days of searching, Mary and Joseph find the twelve-year-old Jesus in the Temple, sitting among the teachers.' },
+    ]
+  },
+  luminous: {
+    name: 'Luminous Mysteries',
+    days: 'Thursday',
+    color: '#c8a84a',
+    list: [
+      { n:1, title:'The Baptism of Jesus', fruit:'Openness to the Holy Spirit', text:'Jesus is baptized by John in the Jordan. The heavens open and the Father\'s voice declares: "This is my beloved Son."' },
+      { n:2, title:'The Wedding at Cana', fruit:'To Mary\'s intercession', text:'At Mary\'s request, Jesus performs his first miracle — turning water into wine — and his disciples believe in him.' },
+      { n:3, title:'Proclamation of the Kingdom', fruit:'Repentance', text:'Jesus proclaims the Kingdom of God, calls sinners to conversion, and forgives those who approach him with faith.' },
+      { n:4, title:'The Transfiguration', fruit:'Desire for holiness', text:'On Mount Tabor, Jesus is transfigured before Peter, James, and John. His face shines like the sun and his garments become white as light.' },
+      { n:5, title:'Institution of the Eucharist', fruit:'Adoration', text:'At the Last Supper, Jesus takes bread and wine and gives himself to his disciples — his Body and Blood — as food for eternal life.' },
+    ]
+  },
+  sorrowful: {
+    name: 'Sorrowful Mysteries',
+    days: 'Tuesday & Friday',
+    color: '#6b2d2d',
+    list: [
+      { n:1, title:'The Agony in the Garden', fruit:'Contrition', text:'Jesus prays in Gethsemane. His sweat falls like drops of blood as he accepts the Father\'s will: "Not my will, but yours be done."' },
+      { n:2, title:'The Scourging at the Pillar', fruit:'Mortification', text:'Jesus is bound and scourged at Pilate\'s order. He endures the blows in silence, offering his suffering for our sins.' },
+      { n:3, title:'The Crowning with Thorns', fruit:'Moral courage', text:'Soldiers mock Jesus as King of the Jews, pressing a crown of thorns onto his head and striking him.' },
+      { n:4, title:'The Carrying of the Cross', fruit:'Patience', text:'Jesus carries his cross through the streets of Jerusalem to Calvary, falling three times under its weight.' },
+      { n:5, title:'The Crucifixion', fruit:'Perseverance', text:'Jesus is nailed to the Cross and dies after three hours of agony. "Father, into your hands I commend my spirit."' },
+    ]
+  },
+  glorious: {
+    name: 'Glorious Mysteries',
+    days: 'Wednesday & Sunday',
+    color: '#3a5278',
+    list: [
+      { n:1, title:'The Resurrection', fruit:'Faith', text:'On the third day, Jesus rises from the dead. Mary Magdalene and the disciples encounter the Risen Lord.' },
+      { n:2, title:'The Ascension', fruit:'Hope', text:'Forty days after the Resurrection, Jesus ascends to the right hand of the Father, promising to send the Holy Spirit.' },
+      { n:3, title:'Descent of the Holy Spirit', fruit:'Love of God', text:'At Pentecost, the Holy Spirit descends upon Mary and the disciples as tongues of fire. The Church is born.' },
+      { n:4, title:'The Assumption', fruit:'Grace of a happy death', text:'At the end of her earthly life, the Virgin Mary is taken up body and soul into the glory of heaven.' },
+      { n:5, title:'Coronation of Mary', fruit:'Trust in Mary\'s intercession', text:'Mary is crowned Queen of Heaven and Earth, interceding for us before her Son until the end of time.' },
+    ]
+  },
+};
+
+const DAY_MYSTERIES = ['glorious','joyful','sorrowful','luminous','sorrowful','luminous','glorious'];
+// Sun=0 Mon=1 Tue=2 Wed=3 Thu=4 Fri=5 Sat=6
+const MYSTERY_ORDER = ['joyful','luminous','sorrowful','glorious'];
+
+const HAIL_MARY = `Hail Mary, full of grace, the Lord is with thee.\nBlessed art thou among women,\nand blessed is the fruit of thy womb, Jesus.\nHoly Mary, Mother of God,\npray for us sinners,\nnow and at the hour of our death. Amen.`;
+
+const OUR_FATHER = `Our Father, who art in heaven,\nhallowed be thy name;\nthy kingdom come,\nthy will be done on earth as it is in heaven.\nGive us this day our daily bread,\nand forgive us our trespasses,\nas we forgive those who trespass against us;\nand lead us not into temptation,\nbut deliver us from evil. Amen.`;
+
+const GLORY_BE = `Glory be to the Father, and to the Son,\nand to the Holy Spirit;\nas it was in the beginning, is now,\nand ever shall be, world without end. Amen.`;
+
+const FATIMA = `O my Jesus, forgive us our sins,\nsave us from the fires of hell,\nlead all souls to heaven,\nespecially those in most need of thy mercy.`;
+
+const HAIL_HOLY_QUEEN = `Hail, holy Queen, Mother of Mercy,\nhail, our life, our sweetness and our hope.\nTo thee do we cry, poor banished children of Eve;\nto thee do we send up our sighs,\nmourning and weeping in this vale of tears.\nTurn then, most gracious advocate,\nthine eyes of mercy toward us;\nand after this our exile,\nshow unto us the blessed fruit of thy womb, Jesus.\nO clement, O loving, O sweet Virgin Mary.`;
+
+function renderRosary() {
+  const day = new Date().getDay();
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const todayKey = DAY_MYSTERIES[day];
+  const today = MYSTERIES[todayKey];
+
+  let s = `
+    <div class="hour-header">
+      <div class="hour-name-row">
+        <span class="latin-name">Rosary</span>
+        <span class="english-name">Marian Devotion</span>
+      </div>
+      <div class="hour-desc">Traditionally prayed in the evening, before or after Vespers.</div>
+      <span class="duration-badge">~20 min</span>
+    </div>`;
+
+  // Today's mysteries
+  s += `
+    <div class="section">
+      ${sectionLabel('Today — ' + dayNames[day])}
+      <div style="padding:14px;border:1px solid var(--border);background:var(--gold-faint);margin-bottom:4px;">
+        <div style="font-family:'Cinzel',serif;font-size:0.72rem;letter-spacing:0.15em;color:var(--gold);margin-bottom:4px;">${today.name.toUpperCase()}</div>
+        <div style="font-size:0.88rem;color:var(--cream-faint);font-style:italic;">${today.days}</div>
+      </div>
+    </div>${ornament()}`;
+
+  // Opening prayers
+  s += `
+    <div class="section">
+      ${sectionLabel('Opening')}
+      <div class="sign-of-cross">
+        <span class="cross-symbol">✝</span>
+        <span class="cross-words">In the name of the Father, and of the Son,<br>and of the Holy Spirit. Amen.</span>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="reading-ref">Apostles' Creed</div>
+        <div class="salve-text">I believe in God, the Father almighty,\nCreator of heaven and earth,\nand in Jesus Christ, his only Son, our Lord,\nwho was conceived by the Holy Spirit,\nborn of the Virgin Mary,\nsuffered under Pontius Pilate,\nwas crucified, died and was buried;\nhe descended into hell;\non the third day he rose again from the dead;\nhe ascended into heaven,\nand is seated at the right hand of God the Father almighty;\nfrom there he will come to judge the living and the dead.\nI believe in the Holy Spirit,\nthe holy catholic Church,\nthe communion of saints,\nthe forgiveness of sins,\nthe resurrection of the body,\nand life everlasting. Amen.</div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="reading-ref">Our Father</div>
+        <div class="salve-text">${OUR_FATHER}</div>
+      </div>
+      <div style="margin-bottom:6px;">
+        <div class="reading-ref">3 Hail Marys <span style="color:var(--cream-faint);font-style:italic;letter-spacing:0;">(for faith, hope, and charity)</span></div>
+        <div class="salve-text">${HAIL_MARY}</div>
+      </div>
+      <div>
+        <div class="reading-ref">Glory Be</div>
+        <div class="salve-text">${GLORY_BE}</div>
+      </div>
+    </div>${ornament()}`;
+
+  // The five decades
+  s += `<div class="section">${sectionLabel('The Five Decades')}`;
+  today.list.forEach((m, i) => {
+    s += `
+      <div style="margin-bottom:22px;padding:16px 18px;border:1px solid var(--border);border-left:2px solid var(--gold);">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px;">
+          <span style="font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.18em;color:var(--gold);">${m.n}.</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.1em;color:var(--gold-dim);">${m.title.toUpperCase()}</span>
+        </div>
+        <div style="font-size:0.85rem;color:rgba(200,168,74,0.45);font-style:italic;font-family:'Cinzel',serif;letter-spacing:0.08em;margin-bottom:8px;">Fruit: ${m.fruit}</div>
+        <div style="font-size:0.95rem;color:var(--cream-faint);font-style:italic;margin-bottom:12px;line-height:1.7;">${m.text}</div>
+        <div style="font-size:0.8rem;color:var(--cream-faint);line-height:1.6;">
+          <span style="color:var(--gold-dim);">Our Father</span> · 
+          <span style="color:var(--gold-dim);">10 Hail Marys</span> · 
+          <span style="color:var(--gold-dim);">Glory Be</span> · 
+          <span style="color:var(--gold-dim);">Fátima Prayer</span>
+        </div>
+      </div>`;
+  });
+  s += `</div>`;
+
+  // Decade prayers for reference
+  s += `${ornament()}
+    <div class="section">
+      ${sectionLabel('Decade Prayers')}
+      <div style="margin-bottom:16px;">
+        <div class="reading-ref">Fátima Prayer <span style="color:var(--cream-faint);font-style:italic;letter-spacing:0;">(after each Glory Be)</span></div>
+        <div class="salve-text">${FATIMA}</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div class="reading-ref">Hail Mary</div>
+        <div class="salve-text">${HAIL_MARY}</div>
+      </div>
+      <div>
+        <div class="reading-ref">Glory Be</div>
+        <div class="salve-text">${GLORY_BE}</div>
+      </div>
+    </div>${ornament()}`;
+
+  // Closing
+  s += `
+    <div class="section">
+      ${sectionLabel('Closing')}
+      <div style="margin-bottom:16px;">
+        <div class="reading-ref">Hail Holy Queen</div>
+        <div class="salve-text">${HAIL_HOLY_QUEEN}</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div class="versicle-block">
+          <div class="versicle"><span class="v-mark">V.</span><span style="font-style:italic;">Pray for us, O holy Mother of God.</span></div>
+          <div class="versicle"><span class="v-mark">R.</span><span style="font-style:italic;">That we may be made worthy of the promises of Christ.</span></div>
+        </div>
+      </div>
+    </div>${ornament()}`;
+
+  // All four mysteries reference
+  s += `<div class="section">${sectionLabel('All Mysteries')}`;
+  MYSTERY_ORDER.forEach(key => {
+    const m = MYSTERIES[key];
+    const isToday = key === todayKey;
+    s += `
+      <div style="margin-bottom:16px;">
+        <div style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.16em;color:${isToday?'var(--gold)':'var(--gold-dim)'};margin-bottom:4px;">
+          ${m.name.toUpperCase()}${isToday?' ✦':''}
+        </div>
+        <div style="font-size:0.82rem;color:var(--cream-faint);font-style:italic;margin-bottom:6px;">${m.days}</div>
+        ${m.list.map(my => `
+          <div style="display:flex;gap:10px;margin-bottom:3px;font-size:0.9rem;color:var(--cream-dim);">
+            <span style="color:var(--gold-dim);flex-shrink:0;">${my.n}.</span>
+            <span>${my.title}</span>
+          </div>`).join('')}
+      </div>`;
+  });
+  s += `</div>`;
+
+  return s;
+}
+
+// ── RENDER NAV ────────────────────────────────────
+function renderNav() {
+  const curId = getCurrentId();
+  const hourTabs = HOURS.map(h => `
+    <button class="hour-tab ${h.id===activeId?'active':''} ${visitedIds.has(h.id)?'visited':''}"
+            onclick="show('${h.id}')">
+      ${h.id===activeId ? '<span style="position:absolute;bottom:0;left:4px;right:4px;height:2px;background:var(--gold);border-radius:2px 2px 0 0"></span>' : ''}
+      <span class="tab-latin">${h.latin.toUpperCase()}</span>
+      <span class="tab-time">${h.timeLabel}</span>
+      ${h.id===curId ? '<span class="tab-dot"></span>' : ''}
+      <span class="tab-check">✓</span>
+    </button>`).join('');
+
+  const rosaryTab = `
+    <button class="hour-tab ${activeId==='rosary'?'active':''} ${visitedIds.has('rosary')?'visited':''}"
+            onclick="show('rosary')" style="border-left:1px solid var(--border);">
+      ${activeId==='rosary' ? '<span style="position:absolute;bottom:0;left:4px;right:4px;height:2px;background:var(--gold);border-radius:2px 2px 0 0"></span>' : ''}
+      <span class="tab-latin">ROSARY</span>
+      <span class="tab-time">✦</span>
+      <span class="tab-check">✓</span>
+    </button>`;
+
+  document.getElementById('hourNav').innerHTML = hourTabs + rosaryTab;
+}
+
+// ── SHOW ──────────────────────────────────────────
+function show(id) {
+  activeId = id;
+  visitedIds.add(id);
+  renderNav();
+  const content = id === 'rosary' ? renderRosary() : renderHour(id);
+  document.getElementById('mainInner').innerHTML = content;
+  document.getElementById('mainScroll').scrollTo({top:0, behavior:'smooth'});
+  const activeTab = document.querySelector('.hour-tab.active');
+  activeTab?.scrollIntoView({inline:'center', behavior:'smooth'});
+}
+
+// ── CLOCK ─────────────────────────────────────────
+function tick() {
+  const el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+// ── INIT ──────────────────────────────────────────
+show(getCurrentId());
+tick();
+setInterval(tick, 30000);
+</script>
+</body>
+</html>
